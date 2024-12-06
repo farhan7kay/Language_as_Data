@@ -1,7 +1,7 @@
 import re
 import statistics
-
-
+import json 
+import os 
 
 regex_clean = r"[^0-9a-zA-Z\sáéíóúüñ]"
 def get_label(w):
@@ -135,9 +135,16 @@ def print_all_senteces_with_structure_indication(all_sent_with_structure,tree_to
         print()
 
 
+def write_list_to_file(label,list_to_save,path_to_save_folder):
+    complete_path = os.path.join(path_to_save_folder,label+".json")
+    with open(complete_path, 'w') as config_file:
+        json.dump(list_to_save, config_file)
 
-
-
+def read_list_from_file(label,path_to_save_folder):
+    complete_path = os.path.join(path_to_save_folder,label+".json")
+    with open(complete_path, 'r') as config_file:   
+        loadedList = json.load(config_file)
+    return loadedList
 
 
 
