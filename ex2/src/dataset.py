@@ -5,15 +5,18 @@ import tiktoken
 
 
 class GPTDataset(Dataset):
-    def __init__(self, txt, tokenizer, context_length):
+    def __init__(self, txt, tokenizer, context_length,allowed_special = True):
         self.input_ids = []
         self.target_ids = []
 
         # Tokenize the entire text
-        token_ids = tokenizer.encode(txt, allowed_special={"<|endoftext|>"})
-
+        if allowed_special:
+            token_ids = tokenizer.encode(txt, allowed_special={"<|endoftext|>"})
+        else:
+            token_ids = tokenizer.encode(txt)
         # Use a sliding window to chunk the book into overlapping sequences of context_length
-        for i in range(0, len(token_ids) - context_length):
+        total = len(token_ids) - context_length
+        for i in range(0, total):
             input_sequence = token_ids[i:i + context_length]
             
             #shift to the right
@@ -22,6 +25,8 @@ class GPTDataset(Dataset):
             # input and output are represented as tensors
             self.input_ids.append(torch.tensor(input_sequence))
             self.target_ids.append(torch.tensor(target_sequence))
+            if i %20000 == 0:
+                print('\r', 'Create Dataset', i, '/',total, end='')
 
     def __len__(self):
         return len(self.input_ids)
@@ -29,14 +34,14 @@ class GPTDataset(Dataset):
     def __getitem__(self, idx):
         return self.input_ids[idx], self.target_ids[idx]
 
-def create_dataloader(txt, batch_size=8, context_length=4, shuffle=True, drop_last=True,
+def create_dataloader(txt,allowed_special=True,tokenizer=tiktoken.get_encoding("gpt2"),
+                      batch_size=8, context_length=4, shuffle=True, drop_last=True,
                          num_workers=0):
 
-    # Initialize the tokenizer
-    tokenizer = tiktoken.get_encoding("gpt2")
+
 
     # Create dataset
-    dataset = GPTDataset(txt, tokenizer, context_length)
+    dataset = GPTDataset(txt, tokenizer, context_length,allowed_special=allowed_special)
     train, dev, test = torch.utils.data.random_split(dataset, [0.8,0.1,0.1])
     
     # Create dataloader

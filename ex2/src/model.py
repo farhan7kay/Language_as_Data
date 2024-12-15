@@ -38,7 +38,37 @@ class SimpleLanguageModel(nn.Module):
         return logits
 
 
-def generate_text(model, tokenizer, start_text, device, context_length=15, temperature=1.0):
+
+
+class LanguageModel(nn.Module):
+    def __init__(self, vocab_size, embedding_dim, context_length, hidden_dim=256, dropout=0.2):
+        super(LanguageModel, self).__init__()
+        self.token_embedding = nn.Embedding(vocab_size, embedding_dim)
+        self.position_embedding = nn.Embedding(context_length, embedding_dim)
+        self.dropout = nn.Dropout(dropout)
+        
+        # Adding feedforward layers and non-linear activation functions
+        self.fc1 = nn.Linear(embedding_dim, hidden_dim)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_dim, vocab_size)
+        
+    def forward(self, x):
+        positions = torch.arange(0, x.size(1), device=x.device).unsqueeze(0)
+        token_embeds = self.token_embedding(x)
+        position_embeds = self.position_embedding(positions)
+        
+        embeddings = token_embeds + position_embeds
+        dropout_layer = self.dropout(embeddings)
+        
+        # Apply the feedforward layers
+        first_layer = self.fc1(dropout_layer)
+        non_linearity = self.relu(first_layer)
+        # Second layer
+        logits = self.fc2(non_linearity)
+        return logits
+
+
+def generate_text(model, tokenizer, start_text, device, context_length=15, temperature=1.0, is_attention = False):
     model.eval()
     generated = tokenizer.encode(start_text)
     context = torch.tensor(generated, dtype=torch.long, device=device).unsqueeze(0)
@@ -47,7 +77,10 @@ def generate_text(model, tokenizer, start_text, device, context_length=15, tempe
         for _ in range(context_length):
             if context.size(1) >= context_length:
                 break
-            logits = model(context)
+            if is_attention:
+                logits, _ = model(context)
+            else:
+                logits = model(context)
             next_token_logits = logits[0, -1, :] / temperature
             probabilities = torch.softmax(next_token_logits, dim=-1)
             next_token_id = torch.multinomial(probabilities, num_samples=1)

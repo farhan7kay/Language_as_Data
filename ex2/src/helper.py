@@ -4,6 +4,16 @@ import json
 import os 
 
 regex_clean = r"[^0-9a-zA-Z\sáéíóúüñ]"
+new_reg_span = r"[^0-9a-zA-Z\sáéíóúüñ,“”.():'-»«\"]"
+
+
+pers_regex1 = r'[^\u0600-\u06FF0-9\s]+'
+pers_regex2 = r',|،'
+pers_regex3 = r"^\d+\s*"
+pers_seperator = ['\xad', '\u200e', '\u200f', '\u200d', '\u200c', '\n']
+
+pers_remove =  r'[^\u0600-\u06FF]{3,}$' #r'^[^\u0600-\u06FF]{1,}$' 
+
 def get_label(w):
     return w.dep_
 
@@ -68,22 +78,103 @@ def get_lines_without_number(file_name):
             final_L.append(split_lin[1])
         return final_L
 
+   
+# Spanish ----------------
+
 def clean_spanish_text(whole_text):
-    temp = []
+    return clean_text_replace(whole_text,regex_clean)
+
+def clean_text_spanish_remove(whole_text):
+    return clean_text_remove(whole_text,new_reg_span)
+def clean_text_spanish_both(whole_text):
+    return clean_text_both(whole_text,new_reg_span, regex_clean)
+
+# Persian -----------------------------------------------
+
+#whole_text is here a array of lines of the text 
+# Return value has the same format 
+ 
+def pers_generic_preprocessing(whole_text):
+    result_l = []
+    count = 0 
     for lin in whole_text:
-        t = re.sub(regex_clean, '', lin)
+        lin_old = lin
+        for sep in pers_seperator:
+            lin = lin.replace(sep, " ")
+        if lin_old != lin:
+            count += 1 
+    
+        result_l.append(lin)
+    print("In: ", count," lines seperators replaced")
+    return result_l
+
+def clean_pers_text_replace(whole_text):
+    temp = pers_generic_preprocessing(whole_text)
+    temp = clean_text_replace(whole_text,pers_regex1)
+    temp = clean_text_replace(temp,pers_regex2)
+    return clean_text_replace(temp,pers_regex3)
+
+
+def clean_pers_remove(whole_text):
+    #pers_remove
+    temp = pers_generic_preprocessing(whole_text)
+    temp = clean_text_remove(temp,pers_remove)
+
+    temp = clean_text_replace(temp,pers_regex2)
+    temp = clean_text_replace(temp,pers_regex3)
+    return temp
+    
+def clean_text_pers_both(whole_text):
+    temp = clean_pers_remove(whole_text)
+    temp = clean_pers_text_replace(temp)
+    return temp
+
+# --------------------------------------
+def clean_text_both(whole_text,reg1,reg2):
+    temp = clean_text_remove(whole_text,reg1)
+    return clean_text_replace(temp,reg2)
+
+#Cleans a text by removing every sent with unknown caracters
+def clean_text_remove(whole_text,reg):
+    temp = []
+    pattern = re.compile(reg)
+    counter = 0
+    for lin in whole_text:
+        if not pattern.search(lin):
+            counter += 1 
+            t2 = re.sub("\n", '. ', lin)
+            temp.append(t2)
+    print("Total lines not removed : ",counter)
+    return temp 
+
+def clean_text_replace(whole_text,reg):
+    temp = []
+    counter = 0 
+    for lin in whole_text:
+        t = re.sub(reg, '', lin)
+        if t != lin:
+            counter += 1 
+        #    print(t)
+        #    print(lin)
+        #    break
         t2 = re.sub("\n", '. ', t)
         #print(".")
         temp.append(t2)
         #temp += t2
+    print("Total lines replaced",counter)
     return temp
 
-def get_cleaned_spanish_text_as_string(path):
+def get_cleaned_text(path,clean_func):
     whole_text = get_lines_without_number(path)
-    whole_text = clean_spanish_text(whole_text)
+    whole_text = clean_func(whole_text)
     result_string = ""
     for x in whole_text: result_string += x
     return result_string
+
+#Uses replace with empty 
+def get_cleaned_spanish_text_as_string(path):
+    return get_cleaned_text(path,clean_spanish_text)
+
 def get_average_word_length(whole_text):
     words_len = 0
     len_words_char_total = 0
