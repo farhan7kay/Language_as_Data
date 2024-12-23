@@ -172,3 +172,57 @@ def generate_text_attention(model, tokenizer, start_text,device, context_length=
     
     generated_text = tokenizer.decode(context[0].tolist())
     return generated_text
+
+
+
+class MultiHeadCausalAttentionCorrect(nn.Module):
+    def __init__(self, embedding_dim, attention_dim, num_heads, context_length, dropout=0.1):
+        super(MultiHeadCausalAttentionCorrect, self).__init__()
+        assert attention_dim % num_heads == 0, "Embedding dimension must be divisible by number of heads"
+        self.num_heads = num_heads
+        self.head_dim = attention_dim // num_heads
+
+        self.embedding_dim = embedding_dim
+        self.attention_dim = attention_dim
+        self.W_q = nn.Linear(embedding_dim, attention_dim)
+        self.W_k = nn.Linear(embedding_dim, attention_dim)
+        self.W_v = nn.Linear(embedding_dim, attention_dim)
+        self.fc_out = nn.Linear(attention_dim, embedding_dim)
+        self.dropout = nn.Dropout(dropout)
+
+        self.register_buffer( 'mask',torch.tril(torch.ones(context_length, context_length)).unsqueeze(0))
+
+    def forward(self, x):
+        batch_size, seq_length, _ = x.size()
+
+        Q = self.W_q(x)
+        K = self.W_k(x)
+        V = self.W_v(x)
+
+        # Split the embedding into self.num_heads different pieces
+        Q = Q.view(batch_size, seq_length, self.num_heads, self.head_dim)
+        K = K.view(batch_size, seq_length, self.num_heads, self.head_dim)
+        V = V.view(batch_size, seq_length, self.num_heads, self.head_dim)
+
+        Q = Q.transpose(1, 2)
+        K = K.transpose(1, 2)
+        V = V.transpose(1, 2)
+
+        #print("Q,K,V: ", Q.shape, K.shape, V.shape)
+        scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        #print("scores: ", scores.shape)
+        # Apply the causal mask
+        mask = self.mask[:, :seq_length, :seq_length]
+        scores = scores.masked_fill(mask == 0, float('-inf'))
+
+        attention_weights = F.softmax(scores, dim=-1)
+        attention_weights = self.dropout(attention_weights)
+        #print("attention weights, values: ", attention_weights.shape, V.shape)
+        context = torch.matmul(attention_weights, V)
+        #print("context: ", context.shape)
+
+        context = context.sum(dim=1)
+        context = context.repeat_interleave(self.num_heads, dim=-1)
+
+        out = self.fc_out(context)
+        return out, attention_weights
