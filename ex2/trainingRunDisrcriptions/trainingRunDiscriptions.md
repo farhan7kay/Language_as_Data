@@ -401,3 +401,77 @@ trainclass.train(model,
 ```
 
 
+```
+
+from src.model import RegularizedLanguageModel
+from src.trainComplete import TrainComplete
+trainclass = TrainComplete(text_path = text_path,path_to_save_folder= path_to_save_folder,tokenizer = tokenizer,allowed_special=False)
+
+model = RegularizedLanguageModel(vocab_size, embedding_dim, context_length, dropout=0.2).to(device)
+
+
+trainclass.train(model,
+              vocab_size,device,raw_text,"pers_standardLinear_ep4_batchsize64",
+                print_every=75,evaluate_every=10000,optimizer=None,criterion=None,
+              batch_size = 64,
+              embedding_dim = 128,
+              context_length = 32,
+              num_epochs = 4
+             )
+```
+
+
+```
+from src.model import RegularizedLanguageModel
+from src.trainComplete import TrainComplete
+trainclass = TrainComplete(text_path = text_path,path_to_save_folder= path_to_save_folder,tokenizer = tokenizer,allowed_special=False)
+
+model = RegularizedLanguageModel(vocab_size, embedding_dim, context_length, dropout=0.2).to(device)
+
+
+trainclass.train(model,
+              vocab_size,device,raw_text,"pers_standardLinear_notRelu_ep5_batchsize32_evaluate_every10000",
+                print_every=75,evaluate_every=10000,optimizer=None,criterion=None,
+              batch_size = 32,
+              embedding_dim = 128,
+              context_length = 32,
+              num_epochs = 5
+             )
+```
+
+
+```
+
+from src.model import RegularizedLanguageModel, SimpleLanguageModel,LanguageModelExtraRelu
+from src.trainComplete import TrainComplete
+trainclass = TrainComplete(text_path = text_path,path_to_save_folder= path_to_save_folder,tokenizer = tokenizer,allowed_special=False)
+
+model = SimpleLanguageModel(vocab_size, embedding_dim, context_length).to(device)
+
+
+trainclass.train(model,
+              vocab_size,device,raw_text,"pers_standardLinear_no_dopout_notRelu_ep5_batchsize32_evaluate_every10000",
+                print_every=75,evaluate_every=10000,optimizer=None,criterion=None,
+              batch_size = 32,
+              embedding_dim = 128,
+              context_length = 32,
+              num_epochs = 5
+             )
+```
+
+
+
+```
+from src.model import RegularizedLanguageModel
+from src.model import LanguageModel,SimpleLanguageModel
+model = SimpleLanguageModel(vocab_size, embedding_dim, context_length).to(device)
+
+trainclass.train(model,
+              vocab_size,device,raw_text,"Simple_Linear_no_dropout_ep4_batch32_evaluateEvery3000_ep5",
+                print_every=75,evaluate_every=3000,optimizer=None,criterion=None,
+              batch_size = 32,
+              embedding_dim = 128,
+              context_length = 32,
+              num_epochs =  5
+             )
+```
